@@ -32,11 +32,6 @@ class Guerrilla():
       headers={'Icy-MetaData': '1'}
     )
 
-    self.guerrilla_server = StreamServer((Guerrilla.settings['STREAM_SERVER_IP'], Guerrilla.settings['STREAM_SERVER_PORT']), self.guerrilla_handle)
-    self.guerrilla_server.start()
-
-    self.read_meta()
-
   def read_meta(self):
     icy_metaint_header = self.songs.headers['icy-metaint'] if 'icy-metaint' in self.songs.headers else None
 
@@ -59,25 +54,26 @@ class Guerrilla():
             print 'Details: ', details, '\n'
 
             if details[0] == 'Guerrilla':
-              response = {
-                'artist':       details[0],
-                'song':         None,
-                'album':        None,
-                'artistImage':  None,
-                'albumImage':   None
-              }
+              response = None
             else:
               artwork  = self.get_artwork(details)
               response = self.prepare_response(details, artwork)
             
-            self.current_response = json.dumps(response)
-            self.current_size = struct.pack('!i', len(self.current_response))
-            
-            print self.current_size
-            print 'Response: ', self.current_size, self.current_response, '\n'
+            if response:
+              self.current_response = json.dumps(response)
+              print 'Length: ', len(self.current_response)
+              self.current_size = struct.pack('!4s', str(len(self.current_response)))
+              
+              print self.current_size
+              print 'Response: ', self.current_size, self.current_response, '\n'
+            else:
+              self.current_response = None
+              print 'Length: 0'
+              self.current_size = struct.pack('!4s', str(0))
 
             self.guerrilla_broadcast(self.current_size)
-            self.guerrilla_broadcast(self.current_response)
+            if self.current_response:
+              self.guerrilla_broadcast(self.current_response)
 
         self.songs.raw.read(icy_metaint_header)
 
@@ -155,12 +151,16 @@ class Guerrilla():
     self.clients.append((sock, addr))
     
     sock.send(self.current_size)
-    sock.send(self.current_response)
+    if self.current_response:
+      sock.send(self.current_response)
 
   def guerrilla_broadcast(self, message):
     for client in self.clients:
       try:
         sock, addr = client
+        print 'Brodcasting to: ', addr
         sock.send(message)
       except:
+        print 'Removed: ', client
         self.clients.remove(client)
+        continue
