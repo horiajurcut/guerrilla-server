@@ -155,6 +155,8 @@ class Guerrilla():
       sock.send(self.current_response)
 
   def guerrilla_broadcast(self, message):
+    current_clients = []
+
     for client in self.clients:
       try:
         sock, addr = client
@@ -162,5 +164,7 @@ class Guerrilla():
         sock.send(message)
       except:
         print 'Removed: ', client
-        self.clients.remove(client)
+        current_clients.append(client)
         continue
+
+    self.clients = [item for item in self.clients if item not in current_clients]
