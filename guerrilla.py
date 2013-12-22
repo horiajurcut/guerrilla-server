@@ -17,7 +17,7 @@ class Guerrilla():
     'LAST_FM_API_KEY':       'a13c587d66811a4c262c79f411eb5472',
     'LAST_FM_TRACK_INFO':    'track.getInfo',
     'LAST_FM_ARTIST_INFO':   'artist.getinfo',
-    'STREAM_SERVER_IP':      '192.168.1.56',
+    'STREAM_SERVER_IP':      '192.168.1.114',
     'STREAM_SERVER_PORT':    1060
   }
 
@@ -165,6 +165,7 @@ class Guerrilla():
       except:
         print 'Removed: ', client
         current_clients.append(client)
-        continue
+      finally:
+        pass
 
     self.clients = [item for item in self.clients if item not in current_clients]
