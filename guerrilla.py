@@ -3,11 +3,14 @@ import gevent
 from gevent.server import StreamServer
 from gevent import monkey
 monkey.patch_socket()
+from gevent import socket
 
 import requests
 import json
 import struct
 import string
+from datetime import datetime
+from datetime import timedelta
 
 
 class Guerrilla():
@@ -17,7 +20,7 @@ class Guerrilla():
     'LAST_FM_API_KEY':       'a13c587d66811a4c262c79f411eb5472',
     'LAST_FM_TRACK_INFO':    'track.getInfo',
     'LAST_FM_ARTIST_INFO':   'artist.getinfo',
-    'STREAM_SERVER_IP':      '192.168.1.114',
+    'STREAM_SERVER_IP':      '192.168.27.100',
     'STREAM_SERVER_PORT':    1060
   }
 
@@ -32,6 +35,8 @@ class Guerrilla():
       headers={'Icy-MetaData': '1'}
     )
 
+    self.start_time = datetime.now()
+
   def read_meta(self):
     icy_metaint_header = self.songs.headers['icy-metaint'] if 'icy-metaint' in self.songs.headers else None
 
@@ -41,6 +46,19 @@ class Guerrilla():
       self.songs.raw.read(icy_metaint_header)
 
       while True:
+        current_time = datetime.now()
+        
+        if current_time - self.start_time > timedelta(hours=3):
+          self.start_time = current_time
+          
+          self.songs = requests.get(
+            Guerrilla.settings['GUERRILLA_STREAM'],
+            stream=True,
+            headers={'Icy-MetaData': '1'}
+          )
+          
+          self.songs.raw.read(icy_metaint_header)
+
         length_byte = ord(self.songs.raw.read(1))
 
         if length_byte > 0:
@@ -162,7 +180,7 @@ class Guerrilla():
         sock, addr = client
         print 'Brodcasting to: ', addr
         sock.send(message)
-      except:
+      except socket.error:
         print 'Removed: ', client
         current_clients.append(client)
       finally:
